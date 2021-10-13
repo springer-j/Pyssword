@@ -70,6 +70,7 @@ class Pyssword:
     
     def create_profile(self):
         #* Compile user data into dictionary and update self.key_data
+        self.generate_password()
         key_data = {
             "site_name":self.site_name,
             "key":self.key,
@@ -82,23 +83,10 @@ class Pyssword:
             "is_stale":False,
         }
    
-        self.key_data = key_data
+        self.all_profiles.append(key_data)
 
-    
-    def save_profile(self):
-        #* Update JSON dict and save file.
-        key_json = MyJson.MyJson(self.key_file)
-        data = key_json.read()
-        data["keys"].append(self.key_data)
-        key_json.save_json(data)
-        return True
-
-    
-    def log_key(self):
-        #* Chain functions to save new profile to the JSON dict. 
-        self.generate_password()
-        self.create_profile()
-        self.save_profile()
+#############################################
+#* Calculating is_stale
 
 #############################################
 #* Encryption functions
@@ -131,16 +119,15 @@ class Pyssword:
         # *Encrypt all data in keylog file.
         myjson = MyJson.MyJson(self.key_file)
         myjson.verbose = False
-        data = myjson.read()
         # Parse through each profile and alter data.
-        for account in data['keys']:
+        for account in self.all_profiles:
             account["site_name"] = self.encrypt(account["site_name"])
             account["key"] = self.encrypt(account["key"])
             account["username"] = self.encrypt(account["username"])
             account["email"] = self.encrypt(account["email"])
         
         # Save JSON file with encrypted data.
-        myjson.save_json(data)
+        myjson.save_json(self.all_profiles)
         
     
     def unlock(self):
@@ -149,7 +136,7 @@ class Pyssword:
         data = json.load(file)
         file.close()
         # Parse through each profile and alter data.
-        for account in data['keys']:
+        for account in data:
             account["site_name"] = self.decrypt(account["site_name"][2:])
             account["key"] = self.decrypt(account["key"][2:])
             account["username"] = self.decrypt(account["username"][2:])
@@ -170,12 +157,12 @@ class Pyssword:
 #* Verification functions 
 
     def verify_user(self): 
-        try:
-            self.unlock()
-        except: 
-            sys.tracebacklimit = 0
-            print('[X] Incorrect key.')
-            sys.exit()  
+        # try:
+        self.unlock()
+        # except: 
+        #     sys.tracebacklimit = 0
+        #     print('[X] Incorrect key.')
+        #     sys.exit()  
 
     def mayday(self):
         #* Overwrite password file.
