@@ -31,8 +31,10 @@ class Pyssword:
         #* Encryption Information 
         self.crypt_key = ''
         self.crypt_key_file = 'resource_files/secret.key'
+        self.all_profiles = []
         #* Init functions
         self.load_chars()
+        
 
 ##############################################
 #* Generate and organize password information.
@@ -122,7 +124,7 @@ class Pyssword:
         # Decrypt and return text
         f = Fernet(self.crypt_key)
         dec = f.decrypt(text.encode())
-        return str(de)
+        return str(dec.decode())
         
 
     def lock(self):
@@ -148,23 +150,21 @@ class Pyssword:
         file.close()
         # Parse through each profile and alter data.
         for account in data['keys']:
-            account["site_name"] = self.decrypt(account["site_name"][2:])[2:]
-            account["key"] = self.decrypt(account["key"][2:])[2:]
-            account["username"] = self.decrypt(account["username"][2:])[2:]
-            account["email"] = self.decrypt(account["email"][2:])[2:]
+            account["site_name"] = self.decrypt(account["site_name"][2:])
+            account["key"] = self.decrypt(account["key"][2:])
+            account["username"] = self.decrypt(account["username"][2:])
+            account["email"] = self.decrypt(account["email"][2:])
+            
+            # Append unlocked profile to obj list
+            # Better than saving to drive.
+            self.all_profiles.append(account)
 
-        # Save JSON file with encrypted data.
-        new_file = open(self.key_file,'w')
-        new_data = json.dumps(data,indent=4)
-        new_file.write(new_data)
-        new_file.close()
+        # # Save JSON file with encrypted data.
+        # new_file = open(self.key_file,'w')
+        # new_data = json.dumps(data,indent=4)
+        # new_file.write(new_data)
+        # new_file.close()
         
-        
-            
-            
-
-            
-
         
 ############################################
 #* Verification functions 
