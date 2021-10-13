@@ -3,6 +3,7 @@ from MyJson import MyJson
 from datetime import datetime
 from cryptography.fernet import Fernet
 import sys 
+import json
 
 class Pyssword:
     def __init__(self, site_name):
@@ -30,8 +31,10 @@ class Pyssword:
         #* Encryption Information 
         self.crypt_key = ''
         self.crypt_key_file = 'resource_files/secret.key'
+        self.all_profiles = []
         #* Init functions
         self.load_chars()
+        
 
 ##############################################
 #* Generate and organize password information.
@@ -56,12 +59,14 @@ class Pyssword:
                 self.usable_chars.append(spec)
         
         return True
+
         
     def generate_password(self):
         #* Generate and return password based on object attributes.
         for i in range(0,self.key_length):
             self.key += r.choice(self.usable_chars)
         return True
+
     
     def create_profile(self):
         #* Compile user data into dictionary and update self.key_data
@@ -78,6 +83,7 @@ class Pyssword:
         }
    
         self.key_data = key_data
+
     
     def save_profile(self):
         #* Update JSON dict and save file.
@@ -86,6 +92,7 @@ class Pyssword:
         data["keys"].append(self.key_data)
         key_json.save_json(data)
         return True
+
     
     def log_key(self):
         #* Chain functions to save new profile to the JSON dict. 
@@ -95,35 +102,69 @@ class Pyssword:
 
 #############################################
 #* Encryption functions
+# Fernet guide: https://devqa.io/encrypt-decrypt-data-python/
 
     def generate_crypt_key(self):
         #* Generate the crypt key
         key = Fernet.generate_key()
         with open("secret.key",'wb') as key_file:
             key_file.write(key)
-    
-    def load_crypt_key(self):
-        #* Find the crypt key and return it.
-        #! Gotta find a saver way to do this.
-        return open(self.crypt_key_file,'rb').read()
-  
-    def encrypt_text(self,text):
-        #* Run the prior two functions to retrieve crypt key.
-        #* Encrypt passed text and return.
-        key = self.load_crypt_key()
-        encoded_message = text.encode()
-        f = Fernet(key)
-        encrypted_text = f.encrypt(encoded_message)
-        return encrypted_text        
-        
-    def lock(self):
-        self.key = self.encrypt_text(self.key)
-        self.username = self.encrypt_text(self.username)
-        self.email = self.encrypt_text(self.email)
-        print(self.key)
-        print(self.username)
-        print(self.email)
 
+
+    def encrypt(self,text):
+        #* Encrypts and returns text
+        encoded = text.encode()
+        f = Fernet(self.crypt_key)
+        encrypted = f.encrypt(encoded)
+        
+        return str(encrypted)
+
+
+    def decrypt(self,text):
+        # Decrypt and return text
+        f = Fernet(self.crypt_key)
+        dec = f.decrypt(text.encode())
+        return str(dec.decode())
+        
+
+    def lock(self):
+        # *Encrypt all data in keylog file.
+        myjson = MyJson.MyJson(self.key_file)
+        myjson.verbose = False
+        data = myjson.read()
+        # Parse through each profile and alter data.
+        for account in data['keys']:
+            account["site_name"] = self.encrypt(account["site_name"])
+            account["key"] = self.encrypt(account["key"])
+            account["username"] = self.encrypt(account["username"])
+            account["email"] = self.encrypt(account["email"])
+        
+        # Save JSON file with encrypted data.
+        myjson.save_json(data)
+        
+    
+    def unlock(self):
+        #* Decrypt all data in keylog file.
+        file = open(self.key_file,'rb')
+        data = json.load(file)
+        file.close()
+        # Parse through each profile and alter data.
+        for account in data['keys']:
+            account["site_name"] = self.decrypt(account["site_name"][2:])
+            account["key"] = self.decrypt(account["key"][2:])
+            account["username"] = self.decrypt(account["username"][2:])
+            account["email"] = self.decrypt(account["email"][2:])
+            
+            # Append unlocked profile to obj list
+            # Better than saving to drive.
+            self.all_profiles.append(account)
+
+        # # Save JSON file with encrypted data.
+        # new_file = open(self.key_file,'w')
+        # new_data = json.dumps(data,indent=4)
+        # new_file.write(new_data)
+        # new_file.close()
+        
         
 ############################################
 #* Verification functions 
@@ -136,8 +177,7 @@ class Pyssword:
                 pass 
             else:
                 print('[X] Incorrect.')
-                sys.exit()
-                
+                sys.exit()         
 
     def mayday(self):
         #* Overwrite password file.

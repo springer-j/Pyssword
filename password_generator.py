@@ -6,6 +6,7 @@ import sys
 
 
 def create_profile():
+    # Create Pyssword obj and collect attributes.
     site_name = input('[+] Website URL: ')
     new_site = Pyssword(site_name)
     new_site.username = input('[+] Profile username: ')
@@ -14,8 +15,10 @@ def create_profile():
     now = datetime.now()
     new_site.created = now.strftime('%m/%d/%y')
     print('[!] Creating new profile...')
+    # Generate password
     new_site.log_key()
     print('#' * 20)
+    # Display password
     print(f'[!] Your password for {new_site.site_name}:')
     print('[!] ' + new_site.key)
     print('#' * 20)
