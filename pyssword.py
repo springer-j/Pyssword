@@ -6,7 +6,7 @@ import sys
 import json
 
 class Pyssword:
-    def __init__(self, site_name):
+    def __init__(self, crypt_key):
         #* File locations 
         self.crypt_key = 'resource_files/secret.key'
         self.data_file = 'resource_files/data.json'
@@ -20,7 +20,7 @@ class Pyssword:
         self.use_specials = True 
         self.key_length = 10 
         #* Profile Information
-        self.site_name = site_name
+        self.site_name = ''
         self.key = ''
         self.username = None 
         self.email = None 
@@ -29,12 +29,12 @@ class Pyssword:
         self.stale_time = 30 
         self.key_data = {}
         #* Encryption Information 
-        self.crypt_key = ''
-        self.crypt_key_file = 'resource_files/secret.key'
+        self.crypt_key = crypt_key
         self.all_profiles = []
         #* Init functions
+        self.verify_user()
         self.load_chars()
-        
+
 
 ##############################################
 #* Generate and organize password information.
@@ -169,15 +169,13 @@ class Pyssword:
 ############################################
 #* Verification functions 
 
-    def verify_user(self):
-        if self.load_crypt_key:
-            self.crypt_key = self.load_crypt_key()
-            verify = input('[!] Enter the key: ')
-            if verify == self.crypt_key:
-                pass 
-            else:
-                print('[X] Incorrect.')
-                sys.exit()         
+    def verify_user(self): 
+        try:
+            self.unlock()
+        except: 
+            sys.tracebacklimit = 0
+            print('[X] Incorrect key.')
+            sys.exit()  
 
     def mayday(self):
         #* Overwrite password file.
