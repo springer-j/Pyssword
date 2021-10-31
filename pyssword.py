@@ -1,6 +1,6 @@
 import random as r
 from MyJson import MyJson
-from datetime import datetime
+from datetime import datetime, date
 from cryptography.fernet import Fernet
 import sys 
 import json
@@ -18,8 +18,9 @@ class Pyssword:
         self.usable_chars = []
         #* Key options 
         self.use_specials = True 
-        self.key_length = 10 
+        self.key_length = 13
         #* Profile Information
+        self.id = 0
         self.site_name = ''
         self.key = ''
         self.username = None 
@@ -34,7 +35,7 @@ class Pyssword:
         #* Init functions
         self.verify_user()
         self.load_chars()
-
+        self.update_stale_state()
 
 ##############################################
 #* Generate and organize password information.
@@ -63,22 +64,28 @@ class Pyssword:
         
     def generate_password(self):
         #* Generate and return password based on object attributes.
+        new_key = ''
         for i in range(0,self.key_length):
-            self.key += r.choice(self.usable_chars)
-        return True
+            new_key += r.choice(self.usable_chars)
+        self.key = new_key
+        return new_key
 
     
     def create_profile(self):
         #* Compile user data into dictionary and update self.key_data
-        self.generate_password()
+        if self.all_profiles:
+            self.id = self.all_profiles[-1]["id"] + 1
+        else:
+            self.id = 1
         key_data = {
+            "id":self.id,
             "site_name":self.site_name,
-            "key":self.key,
+            "key":self.generate_password(),
             "username":self.username,
             "email":self.email,
             "is_chain":self.is_chain,
             "created":self.created,
-            "last_touched":None,
+            "last_touched":self.created,
             "stale_time":self.stale_time,
             "is_stale":False,
         }
@@ -88,15 +95,52 @@ class Pyssword:
 #############################################
 #* Calculating is_stale
 
-#############################################
+    def get_date_object(self,date_string):
+        month = date_string[0:2]
+        day = date_string[3:5]
+        year = '20' + date_string[6:]
+        return date(int(year),int(month),int(day))
+    
+    
+    def calculate_date_since(self,password_date):
+        now = date.today()
+        last_altered = self.get_date_object(password_date)
+        delta = now - last_altered 
+        return delta.days
+    
+    
+    def update_stale_state(self):
+        for profile in self.all_profiles:
+            days_since = self.calculate_date_since(profile["last_touched"])
+            profile["is_stale"] = days_since > profile["stale_time"]
+
+############################################
+#* Edit account information 
+
+    def update_password(self,id):
+        now = datetime.now()
+        new_password = self.generate_password()
+        for user in self.all_profiles:
+            if user["id"] == id: # Find user in list by ID key.
+                user["key"] = new_password # Assign new password 
+                user["last_touched"] = now.strftime("%m/%d/%y") # Update "last touched"
+                user["is_stale"] = False # Ensure is_stale is False 
+
+
+    def delete_account(self, id):
+        for user in self.all_profiles:
+            if user["id"] == id:
+                self.all_profiles.remove(user)
+                break
+        
+       
+############################################
 #* Encryption functions
 # Fernet guide: https://devqa.io/encrypt-decrypt-data-python/
 
     def generate_crypt_key(self):
-        #* Generate the crypt key
-        key = Fernet.generate_key()
-        with open("secret.key",'wb') as key_file:
-            key_file.write(key)
+        #* Generate the crypt key and assign to obj attr.
+        self.crypt_key = Fernet.generate_key()
 
 
     def encrypt(self,text):
@@ -164,6 +208,7 @@ class Pyssword:
         #     print('[X] Incorrect key.')
         #     sys.exit()  
 
+
     def mayday(self):
         #* Overwrite password file.
         file = open(self.key_file,'w')
@@ -172,9 +217,4 @@ class Pyssword:
             file.write('\n')
         file.close()
         print('can i keep you?')
-    
-    
-
-    
-    
     
